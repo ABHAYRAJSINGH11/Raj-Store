@@ -6,31 +6,35 @@
   <title>Raj's Store - Premium Shopping</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+  <!-- Clerk Auth SDK -->
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_test_c21pbGluZy1lYXJ3aWctODYuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    src="https://smiling-earwig-86.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+    type="text/javascript"
+  ></script>
 </head>
 <body>
 
-  <!-- Login Modal -->
-  <div id="login-modal" class="login-modal">
-    <div class="login-box">
-      <div class="login-header">
-        <h2>Welcome to Raj's Store</h2>
-        <p>Please login to continue</p>
+  <!-- Clerk Auth Modal (shown when not signed in) -->
+  <div id="clerk-auth-screen" class="clerk-auth-screen">
+    <div class="clerk-auth-wrapper">
+      <!-- Branding above Clerk's UI -->
+      <div class="clerk-store-brand">
+        <div class="clerk-brand-logo">RAJ'S STORE</div>
+        <p class="clerk-brand-tagline">Premium Fashion · Electronics · Lifestyle</p>
       </div>
-      
-      <form id="login-form">
-        <div class="input-group">
-          <i class="fas fa-envelope"></i>
-          <input type="email" id="email" placeholder="Email Address" required />
-        </div>
-        <div class="input-group">
-          <i class="fas fa-lock"></i>
-          <input type="password" id="password" placeholder="Password" required />
-        </div>
-        <button type="submit" class="login-btn">Login</button>
-      </form>
 
-      <button id="skip-login" class="skip-btn">Skip Login (Demo)</button>
-      <p class="demo-note">Demo: Use any email and password</p>
+      <!-- Clerk mounts its own Sign In component here -->
+      <div id="clerk-sign-in-container"></div>
+
+      <!-- Guest option below Clerk UI -->
+      <button id="skip-login" class="skip-btn">
+        <i class="fas fa-user-secret"></i> Browse as Guest
+      </button>
+      <p class="demo-note">Sign in to save orders across sessions & devices</p>
     </div>
   </div>
 
@@ -63,6 +67,12 @@
           <i class="fas fa-shopping-cart" id="cart-btn"></i>
           <span id="cart-count" class="cart-count">0</span>
         </div>
+        <!-- Profile Icon -->
+        <div class="profile-nav-icon" id="profile-nav-btn">
+          <div class="profile-avatar-mini" id="profile-avatar-mini">
+            <i class="fas fa-user"></i>
+          </div>
+        </div>
       </div>
     </nav>
 
@@ -87,15 +97,67 @@
     <!-- Shop Section -->
     <section id="shop" class="shop">
       <div class="shop-header">
-        <h2>Trending Products</h2>
+        <div>
+          <h2>Trending Products</h2>
+          <span id="product-count" class="product-count">70 products</span>
+        </div>
         <div class="filter-sort">
           <select id="sort-select">
             <option value="default">Sort By</option>
             <option value="price-low">Price: Low to High</option>
             <option value="price-high">Price: High to Low</option>
             <option value="name">Name A-Z</option>
+            <option value="rating">Top Rated</option>
           </select>
         </div>
+      </div>
+      <div class="filter-bar">
+        <div class="filter-group">
+          <label class="filter-label"><i class="fas fa-tag"></i> Category</label>
+          <div class="custom-select-wrap">
+            <select id="category-select" onchange="setCategoryFromDropdown(this.value)">
+              <option value="all">🛍️ All Products</option>
+              <option value="fashion">👗 Fashion</option>
+              <option value="shoes">👟 Shoes</option>
+              <option value="cosmetics">💄 Cosmetics</option>
+              <option value="electronics">📱 Electronics</option>
+              <option value="lifestyle">🌿 Lifestyle</option>
+            </select>
+            <i class="fas fa-chevron-down select-arrow"></i>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label"><i class="fas fa-rupee-sign"></i> Price Range</label>
+          <div class="custom-select-wrap">
+            <select id="price-range-select" onchange="filterProducts()">
+              <option value="all">All Prices</option>
+              <option value="0-999">Under ₹1,000</option>
+              <option value="1000-2000">₹1,000 – ₹2,000</option>
+              <option value="2001-4000">₹2,001 – ₹4,000</option>
+              <option value="4001-7000">₹4,001 – ₹7,000</option>
+              <option value="7001-99999">Above ₹7,000</option>
+            </select>
+            <i class="fas fa-chevron-down select-arrow"></i>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label"><i class="fas fa-star"></i> Min Rating</label>
+          <div class="custom-select-wrap">
+            <select id="rating-select" onchange="filterProducts()">
+              <option value="0">All Ratings</option>
+              <option value="3">3★ & above</option>
+              <option value="4">4★ & above</option>
+              <option value="4.5">4.5★ & above</option>
+            </select>
+            <i class="fas fa-chevron-down select-arrow"></i>
+          </div>
+        </div>
+
+        <button class="clear-filters-btn" onclick="clearAllFilters()">
+          <i class="fas fa-times-circle"></i> Clear Filters
+        </button>
       </div>
       <div class="products-grid" id="products-grid"></div>
     </section>
@@ -107,6 +169,27 @@
         <i class="fas fa-times" id="close-wishlist"></i>
       </div>
       <div id="wishlist-items" class="cart-items"></div>
+    </div>
+
+    <!-- Profile Sidebar -->
+    <div id="profile-sidebar" class="cart-sidebar profile-sidebar">
+      <div class="cart-header">
+        <h3>My Account</h3>
+        <i class="fas fa-times" id="close-profile"></i>
+      </div>
+      <div id="profile-sidebar-content"></div>
+    </div>
+
+    <!-- Profile / Orders Full Panel (overlay) -->
+    <div id="profile-panel-overlay" class="profile-panel-overlay hidden">
+      <div class="profile-panel">
+        <div class="profile-panel-header">
+          <button class="profile-back-btn" id="profile-back-btn"><i class="fas fa-arrow-left"></i> Back</button>
+          <h2 id="profile-panel-title">My Orders</h2>
+          <button class="profile-close-x" id="profile-panel-close">&times;</button>
+        </div>
+        <div id="profile-panel-body" class="profile-panel-body"></div>
+      </div>
     </div>
 
     <!-- Cart Sidebar -->
