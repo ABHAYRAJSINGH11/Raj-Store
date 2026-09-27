@@ -1,5 +1,5 @@
 // ====================== PRODUCTS DATA (loaded from backend API) ======================
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = "https://raj-store-tju8.onrender.com/api";
 let products = [];
 
 async function loadProducts() {
